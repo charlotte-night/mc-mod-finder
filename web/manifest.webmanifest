@@ -1,0 +1,15 @@
+{
+  "name": "MC Mod Finder · 我的世界模组/整合包搜索与推荐",
+  "short_name": "MC Mod Finder",
+  "description": "在浏览器里搜索 Modrinth 的模组、整合包、资源包、光影与数据包，用你自己的网络实测下载速度并按速度与免费程度推荐。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#14161c",
+  "theme_color": "#14161c",
+  "icons": [
+    { "src": "./assets/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "./assets/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "maskable" }
+  ]
+}

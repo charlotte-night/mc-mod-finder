@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MC Mod Finder · 我的世界模组/整合包搜索与推荐（纯前端版）</title>
+  <meta name="description" content="在浏览器里直接搜索 Modrinth 的模组、整合包、资源包、光影与数据包，用你自己的网络实测下载速度，并按速度与免费程度给出推荐分。无需服务器。" />
+  <meta name="color-scheme" content="dark" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+</head>
+
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>MC Mod Finder</h1>
+        <p class="tagline">按名称 / 版本 / 类型搜索模组与整合包，并根据<b>实测下载速度</b>与<b>是否免费</b>给出推荐</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div id="sourceStatus" class="source-status" aria-live="polite"></div>
+      <button type="button" id="settingsToggle" class="ghost tiny" aria-expanded="false" aria-controls="settingsPanel">数据源设置</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="envNotice" class="notice" hidden></div>
+
+    <details id="settingsPanel" class="panel settings-panel" hidden>
+      <summary>数据源设置 · CurseForge API key（可选）</summary>
+      <div class="settings-body">
+        <p class="hint">
+          本站是纯前端页面，没有任何后端可以替你保管 key，所以 <b>不会</b> 内置任何 key。
+          如果你需要 CurseForge 的结果，请到
+          <a href="https://console.curseforge.com/" target="_blank" rel="noreferrer">console.curseforge.com</a>
+          免费申请一个，粘贴到下面：它只保存在你自己的浏览器里（localStorage），并且只会发送到 <code>api.curseforge.com</code>。
+          在共用电脑上用完请点「清除」。
+        </p>
+        <div class="cf-row">
+          <input id="cfKeyInput" type="password" placeholder="粘贴 CurseForge API key" aria-label="CurseForge API key" autocomplete="off" spellcheck="false" />
+          <button type="button" id="cfKeySave" class="primary">保存并检测</button>
+          <button type="button" id="cfKeyClear" class="ghost">清除</button>
+        </div>
+        <p class="hint" id="cfKeyState"></p>
+        <div class="settings-row">
+          <label class="inline-field">
+            <span>测速采样</span>
+            <select id="speedBytes">
+              <option value="262144">256 KB / 主机</option>
+              <option value="524288">512 KB / 主机</option>
+              <option value="1048576" selected>1 MB / 主机</option>
+              <option value="2097152">2 MB / 主机</option>
+              <option value="4194304">4 MB / 主机</option>
+            </select>
+          </label>
+          <span class="hint">每次测速最多下载「主机数 × 采样大小」的流量，只花你自己的带宽。</span>
+        </div>
+        <div class="settings-row">
+          <button type="button" id="clearCache" class="ghost tiny">清除本地缓存</button>
+          <span class="hint" id="cacheState"></span>
+        </div>
+
+        <hr class="settings-sep" />
+        <h3 class="settings-title">社区中继（可选，用于把 B 站搜索结果直接列出来）</h3>
+        <p class="hint">
+          贴吧与 B 站都不允许网页直接读它们的接口，唯一能真正取到社区条目的办法是自己有个中继。
+          两种都行：<b>自建 RSSHub</b>（<code>docker run -d -p 1200:1200 diygod/rsshub</code>，然后填 <code>http://127.0.0.1:1200</code>），
+          或一个 <b>CORS 转发前缀</b>（形如 <code>https://xxx.workers.dev/?url=</code>，地址里带 <code>{url}</code> 也行）。
+          公共实例实测当前几乎都返回 503，所以默认关闭、也不预置任何一个。
+          注意：<b>RSSHub 没有贴吧路由</b>，所以中继只能带来 B 站条目。
+        </p>
+        <div class="cf-row">
+          <input id="relayBase" type="text" placeholder="http://127.0.0.1:1200 或 https://xxx.workers.dev/?url=" aria-label="社区中继地址" autocomplete="off" spellcheck="false" />
+          <input id="relayUid" type="text" placeholder="B 站 UP 主 UID（可选，如 2267573）" aria-label="B 站 UP 主 UID" autocomplete="off" spellcheck="false" />
+          <button type="button" id="relaySave" class="primary">保存并检测</button>
+          <button type="button" id="relayClear" class="ghost">关闭</button>
+        </div>
+        <p class="hint" id="relayState"></p>
+      </div>
+    </details>
+
+    <form id="searchForm" class="panel search-panel" autocomplete="off">
+      <div class="search-row">
+        <input id="query" type="search" name="q" placeholder="输入名称，例如 JEI、Create、钠、暮色森林、ATM10…" aria-label="搜索名称" />
+        <button type="submit" class="primary">搜索</button>
+      </div>
+
+      <div class="filters">
+        <label class="field">
+          <span>类型</span>
+          <select id="type" name="type">
+            <option value="mod" selected>模组</option>
+            <option value="modpack">整合包</option>
+            <option value="resourcepack">资源包</option>
+            <option value="shader">光影</option>
+            <option value="datapack">数据包</option>
+            <option value="all">全部</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>游戏版本</span>
+          <select id="version" name="version">
+            <option value="">不限</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>加载器</span>
+          <select id="loader" name="loader">
+            <option value="">不限</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>排序</span>
+          <select id="sort" name="sort">
+            <option value="score" selected>推荐分（综合）</option>
+            <option value="speed">下载速度优先</option>
+            <option value="free">免费程度优先</option>
+            <option value="downloads">下载量</option>
+            <option value="followers">关注数</option>
+            <option value="updated">最近更新</option>
+            <option value="relevance">名称相关度</option>
+          </select>
+        </label>
+
+        <label class="field checkbox">
+          <input id="freeOnly" type="checkbox" />
+          <span>只看可直接下载的免费资源</span>
+        </label>
+
+        <label class="field checkbox">
+          <input id="measuredOnly" type="checkbox" />
+          <span>只看已测速的结果</span>
+        </label>
+      </div>
+
+      <div class="ext-links">
+        <span class="ext-label">在其它站点搜索：</span>
+        <span id="extLinks"></span>
+      </div>
+      <p class="hint ext-note">
+        这些站点没有开放跨域接口，浏览器端无法直接抓取，所以这里只提供跳转，不会伪造它们的数据。
+      </p>
+
+      <details id="weightsBox" class="weights">
+        <summary>推荐权重（速度 —% · 免费 —%）— 点击调整</summary>
+        <div class="weights-grid" id="weightsGrid"></div>
+        <div class="weights-actions">
+          <button type="button" id="resetWeights" class="ghost">恢复默认权重</button>
+          <span class="hint">权重会自动归一化。调整后立即重新排序。</span>
+        </div>
+      </details>
+    </form>
+
+    <details id="communityPanel" class="panel community-panel">
+      <summary id="communitySummary">社区检索 · B 站 / 贴吧（浏览器抓不到它们的接口，这里生成对的搜索串并一键开搜）</summary>
+      <div class="community-body">
+        <p class="hint" id="communityIntro">
+          贴吧与 B 站的接口<strong>不返回跨域许可</strong>（B 站搜索还有 412 风控），网页脚本在浏览器里读不到它们的数据，
+          静态站点没有合法办法绕过。所以这里做两件事：把你的关键词按各站习惯拼成<strong>能搜到东西的查询串</strong>，
+          并支持一次多处开搜；如果你愿意配一个自己的 RSS 中继，B 站的搜索结果还能直接列在下面（见「数据源设置」）。
+        </p>
+        <div class="community-term-row">
+          <span class="hint">当前查询串：</span>
+          <code id="communityTerm">（先在上面输入关键词）</code>
+          <button type="button" id="copyTerm" class="ghost tiny">复制搜索串</button>
+          <a id="openAll" class="button-like" href="#" target="_blank" rel="noreferrer"><button type="button" class="primary tiny">一键开搜（4 站）</button></a>
+        </div>
+        <div class="community-actions">
+          <label class="inline-field">
+            <span>B 站线路</span>
+            <select id="communityMirror">
+              <option value="main">bilibili.com（默认）</option>
+              <option value="tw">bilibili.com（港澳台线路）</option>
+            </select>
+          </label>
+          <label class="field checkbox">
+            <input id="communityAll" type="checkbox" />
+            <span>显示全部站点（默认只显示 B 站 / 贴吧 / MC 百科）</span>
+          </label>
+        </div>
+        <div id="communityTargets" class="community-grid"></div>
+        <div id="communityRelay" class="community-relay"></div>
+      </div>
+    </details>
+
+    <details id="cfPanel" class="panel cf-panel" hidden>
+      <summary id="cfSummary">CurseForge 按数字 ID 查询</summary>
+      <div class="cf-row">
+        <input id="cfId" type="text" placeholder="数字项目 ID，例如 238222（JEI）、462042（整合包）" aria-label="CurseForge 项目 ID" />
+        <button type="button" id="cfBtn" class="primary">查询</button>
+      </div>
+      <p class="hint" id="cfHint"></p>
+      <div id="cfResult"></div>
+    </details>
+
+    <section class="panel toolbar" id="toolbar" hidden>
+      <div class="toolbar-left">
+        <span id="resultCount" class="count"></span>
+        <span id="tookMs" class="muted"></span>
+      </div>
+      <div class="toolbar-right">
+        <label class="inline-field">
+          <span>测速数量</span>
+          <input id="speedLimit" type="number" min="1" max="16" value="8" />
+        </label>
+        <button type="button" id="speedBtn" class="primary">为推荐测速</button>
+      </div>
+    </section>
+
+    <section id="reports" class="reports" hidden></section>
+    <section id="status" class="status" hidden></section>
+    <section id="results" class="results"></section>
+    <section id="empty" class="empty" hidden></section>
+  </main>
+
+  <footer class="footer">
+    <p>
+      纯前端站点：搜索、推荐计算、测速全部在你的浏览器里完成，没有任何后端服务器。
+      测速对同一 CDN 主机只真实下载一次采样（默认 1 MB），结果按主机缓存 10 分钟。
+    </p>
+    <p id="footerNote" class="muted"></p>
+    <details id="aboutBox" class="about">
+      <summary>数据来源与已知限制</summary>
+      <ul>
+        <li><b>Modrinth</b>：搜索 / 标签 / 版本接口允许浏览器跨域访问，功能完整，并且可以真实分块下载测速。</li>
+        <li><b>CurseForge</b>：接口允许浏览器访问，但需要你自己的 API key；且文件所在的 <code>mediafilez.forgecdn.net</code> 不返回跨域许可，浏览器读不到文件字节，所以 CurseForge 的条目无法测速，速度项按中性值计分。</li>
+        <li><b>MC百科 / 9Minecraft / Planet Minecraft</b> 等站点没有开放接口，本站只提供跳转搜索。</li>
+        <li>推荐分 = 名称相关度、下载量、下载速度、免费程度、更新活跃度、关注人数 六项加权，权重可自行调整；未测速的条目在速度项上取中性值，不会因此被埋没或拔高。</li>
+      </ul>
+    </details>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+
+</html>

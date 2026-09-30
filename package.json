@@ -1,0 +1,32 @@
+{
+  "name": "mc-mod-finder",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minecraft 模组/整合包搜索与推荐：web/ 是可直接发布到 GitHub Pages 的纯前端站点，server/ 是等价的本地自托管版本。",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "launch": "node scripts/launch.mjs",
+    "stop": "node scripts/stop.mjs",
+    "icon": "node scripts/make-icon.mjs",
+    "test": "node --test test/",
+    "test:web": "node test/web-lib.test.js && node test/web-community.test.js && node test/web-site.test.js",
+    "test:web:live": "node test/web-live.test.js",
+    "test:web:all": "node test/web-lib.test.js && node test/web-community.test.js && node test/web-site.test.js && node test/web-live.test.js",
+    "test:server": "node test/scoring.test.js && node test/normalize.test.js && node test/cache.test.js && node test/ratelimit.test.js && node test/modrinth.test.js && node test/curseforge.test.js && node test/speedtest.test.js && node test/api.test.js",
+    "serve:web": "node scripts/serve-web.mjs",
+    "test:live": "node scripts/live-check.mjs"
+  },
+  "keywords": [
+    "minecraft",
+    "modrinth",
+    "curseforge",
+    "modpack",
+    "search"
+  ],
+  "license": "MIT"
+}
